@@ -723,7 +723,7 @@
         <div class="detail-card">
           <span class="detail-icon">📅</span>
           <span class="detail-label">Fecha</span>
-          <span class="detail-value">Domingo 15 de Noviembre</span>
+          <span class="detail-value">S&aacute;bado 14 de Noviembre</span>
           <span class="detail-extra">2026</span>
         </div>
         <div class="detail-card">
@@ -930,6 +930,34 @@
   <!-- YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api"></script>
 
+  <!-- ===== FIREBASE (muro de mensajes compartido) ===== -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+    /* =====================================================================
+       PEGA AQUÍ LA CONFIGURACIÓN DE TU PROYECTO FIREBASE
+       (la copias desde la consola de Firebase, ver la guía que te di).
+       Reemplaza TODOS los valores "PEGA_AQUI_..." por los de tu proyecto.
+    ===================================================================== */
+    var firebaseConfig = {
+      apiKey: "PEGA_AQUI_API_KEY",
+      authDomain: "PEGA_AQUI_PROJECT_ID.firebaseapp.com",
+      projectId: "PEGA_AQUI_PROJECT_ID",
+      storageBucket: "PEGA_AQUI_PROJECT_ID.appspot.com",
+      messagingSenderId: "PEGA_AQUI_SENDER_ID",
+      appId: "PEGA_AQUI_APP_ID"
+    };
+
+    var firebaseDB = null;
+    (function initFirebase() {
+      try {
+        if (firebaseConfig.apiKey.indexOf('PEGA_AQUI') === 0) return; // aún sin configurar
+        firebase.initializeApp(firebaseConfig);
+        firebaseDB = firebase.firestore();
+      } catch (e) { console.log('Firebase no inicializado:', e); }
+    })();
+  </script>
+
   <script>
     /* ===== YOUTUBE BACKGROUND MUSIC ===== */
     var ytPlayer = null;
@@ -1072,7 +1100,7 @@
     revEls.forEach(function(el) { obs.observe(el); });
 
     /* ===== COUNTDOWN ===== */
-    var evDate = new Date('2026-11-15T15:00:00').getTime();
+    var evDate = new Date('2026-11-14T15:00:00').getTime();
     function updateCD() {
       var now = Date.now();
       var d = evDate - now;
@@ -1155,7 +1183,7 @@
       var msg = '❤️❤️ *¡Baby Shower!* ❤️❤️\n\n';
       msg += '💕💕 *Alice Madelyn de la Cruz Romo* 💕💕\n\n';
       msg += '💖 ¡Confirmo mi asistencia con mucho gusto! 💖\n\n';
-      msg += '🗓️ Domingo 15 de noviembre 2026\n';
+      msg += '🗓️ Sábado 14 de noviembre 2026\n';
       msg += '🕐 3:00 PM\n';
       msg += '🎉 ¡Nos vemos ahí, falta menos! 🎊🎉';
       var waURL = 'https://wa.me/' + hostNumber + '?text=' + encodeURIComponent(msg);
@@ -1168,7 +1196,7 @@
       var inviteURL = 'https://angeortega45-code.github.io/invitacion-baby-shower/';
       var shareText = '🎀✨ ¡Estás invitad@ al Baby Shower! ✨🎀\n\n' +
         '👶 💕 Alice Madelyn de la Cruz Romo 💕 👶\n\n' +
-        '📅 Domingo 15 de noviembre 2026\n' +
+        '📅 Sábado 14 de noviembre 2026\n' +
         '🕐 3:00 PM\n' +
         '🎨 Dress code: Tono pastel 🌸\n\n' +
         '👉 Mira la invitación completa aquí:\n' + inviteURL + '\n\n' +
@@ -1215,65 +1243,68 @@
     var dedicationSaveBtn = document.getElementById('dedicationSaveBtn');
     var dedicationMessages = document.getElementById('dedicationMessages');
 
-    // Load saved dedications from localStorage
-    function loadDedications() {
-      try {
-        var saved = JSON.parse(localStorage.getItem(DEDICATION_KEY) || '[]');
-        if (!Array.isArray(saved)) saved = [];
-        // Remove the title if it exists, we'll re-add it
-        var titleEl = dedicationMessages.querySelector('.dedication-messages-title');
-        dedicationMessages.innerHTML = '';
-        if (titleEl) dedicationMessages.appendChild(titleEl);
-        else {
-          var p = document.createElement('p');
-          p.className = 'dedication-messages-title';
-          p.textContent = '✨ Mensajes para los papás';
-          dedicationMessages.appendChild(p);
-        }
-        // Render each saved dedication
-        saved.forEach(function(d) {
-          renderDedication(d.name, d.text, d.time, false);
-        });
-      } catch(e) {
-        console.log('Error loading dedications:', e);
-      }
-    }
-
-    // Save dedications to localStorage
-    function saveDedicationsToStorage() {
-      try {
-        var items = [];
-        dedicationMessages.querySelectorAll('.dedication-bubble').forEach(function(bubble) {
-          var author = bubble.querySelector('.dedication-bubble-author');
-          var text = bubble.querySelector('.dedication-bubble-text');
-          var time = bubble.querySelector('.dedication-bubble-time');
-          items.push({
-            name: author ? author.textContent.replace(/^[^\s]+\s/, '') : 'Anónimo',
-            text: text ? text.textContent : '',
-            time: time ? time.textContent : ''
-          });
-        });
-        localStorage.setItem(DEDICATION_KEY, JSON.stringify(items));
-      } catch(e) {
-        console.log('Error saving dedications:', e);
+    // Asegura el título y limpia las burbujas actuales
+    function resetMessagesContainer() {
+      var titleEl = dedicationMessages.querySelector('.dedication-messages-title');
+      dedicationMessages.innerHTML = '';
+      if (titleEl) dedicationMessages.appendChild(titleEl);
+      else {
+        var p = document.createElement('p');
+        p.className = 'dedication-messages-title';
+        p.textContent = '✨ Mensajes para los papás';
+        dedicationMessages.appendChild(p);
       }
     }
 
     // Render a single dedication bubble
-    function renderDedication(name, text, timeStr, save) {
+    function renderDedication(name, text, timeStr) {
       var bubble = document.createElement('div');
       bubble.className = 'dedication-bubble';
-      var safeName = name.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      var safeText = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var safeName = String(name).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var safeText = String(text).replace(/</g,'&lt;').replace(/>/g,'&gt;');
       bubble.innerHTML = '<p class="dedication-bubble-author">💕 ' + safeName + '</p>'
         + '<p class="dedication-bubble-text">' + safeText + '</p>'
-        + '<p class="dedication-bubble-time">' + timeStr + '</p>';
+        + '<p class="dedication-bubble-time">' + (timeStr || '') + '</p>';
       dedicationMessages.appendChild(bubble);
-      if (save) saveDedicationsToStorage();
+    }
+
+    /* ---- MODO COMPARTIDO (Firebase) o LOCAL (respaldo) ---- */
+    function loadFromLocal() {
+      try {
+        var saved = JSON.parse(localStorage.getItem(DEDICATION_KEY) || '[]');
+        if (!Array.isArray(saved)) saved = [];
+        resetMessagesContainer();
+        saved.forEach(function(d) { renderDedication(d.name, d.text, d.time); });
+      } catch(e) { console.log('Error cargando local:', e); }
+    }
+    function saveToLocal(name, text, timeStr) {
+      try {
+        var saved = JSON.parse(localStorage.getItem(DEDICATION_KEY) || '[]');
+        if (!Array.isArray(saved)) saved = [];
+        saved.push({ name: name, text: text, time: timeStr });
+        localStorage.setItem(DEDICATION_KEY, JSON.stringify(saved));
+      } catch(e) { console.log('Error guardando local:', e); }
+    }
+
+    // Escucha en tiempo real los mensajes de Firestore (todos ven todo)
+    function startFirebaseListener() {
+      firebaseDB.collection('dedicatorias')
+        .orderBy('createdAt', 'asc')
+        .onSnapshot(function(snapshot) {
+          resetMessagesContainer();
+          snapshot.forEach(function(doc) {
+            var d = doc.data();
+            renderDedication(d.name, d.text, d.time);
+          });
+        }, function(err) {
+          console.log('Error Firestore, usando respaldo local:', err);
+          loadFromLocal();
+        });
     }
 
     // Load on page start
-    loadDedications();
+    if (firebaseDB) startFirebaseListener();
+    else loadFromLocal();
 
     dedicationText.addEventListener('input', function() {
       charCount.textContent = dedicationText.value.length + ' / 300';
@@ -1312,14 +1343,34 @@
       var now = new Date();
       var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
       var dateStr = now.getDate() + '/' + (now.getMonth()+1) + '/' + now.getFullYear();
+      var fullTime = dateStr + ' ' + timeStr;
 
-      renderDedication(name, text, dateStr + ' ' + timeStr, true);
-
-      dedicationText.value = '';
-      charCount.textContent = '0 / 300';
-
-      // Mini confetti
-      confetti();
+      if (firebaseDB) {
+        // Guardar en la base compartida: aparecerá para todos automáticamente
+        dedicationSaveBtn.disabled = true;
+        firebaseDB.collection('dedicatorias').add({
+          name: name,
+          text: text,
+          time: fullTime,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function() {
+          dedicationText.value = '';
+          charCount.textContent = '0 / 300';
+          confetti();
+        }).catch(function(err) {
+          console.log('Error al publicar:', err);
+          alert('No se pudo publicar el mensaje. Revisa tu conexión e inténtalo de nuevo.');
+        }).finally(function() {
+          dedicationSaveBtn.disabled = false;
+        });
+      } else {
+        // Respaldo local (si Firebase aún no está configurado)
+        renderDedication(name, text, fullTime);
+        saveToLocal(name, text, fullTime);
+        dedicationText.value = '';
+        charCount.textContent = '0 / 300';
+        confetti();
+      }
     });
   </script>
 </body>
